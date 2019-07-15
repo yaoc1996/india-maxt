@@ -1,4 +1,4 @@
-#data
+# data
 
 There are two types of CSV files:
 
@@ -9,6 +9,6 @@ Notes:
 * district_to_grid_map.csv -- Maps the districts to the grids by minimizing euclidean distance.
 * gadm36_IND_2_simplified.json -- The geojson for the district-level map of India. The resolution is reduced for faster visualizations.
 
-#src
+# src
 
 Contains the source codes.
