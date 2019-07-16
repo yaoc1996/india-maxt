@@ -12,8 +12,8 @@ const files = [
 ]
 
 const INDGeojsonFile = "/gadm36_IND_2_simplified.json";
-const MAP_HEIGHT = window.innerHeight-150,
-      MAP_WIDTH = Math.min(window.innerHeight-150, 512),
+const MAP_HEIGHT = 512,
+      MAP_WIDTH = 512,
       LINE_WIDTH = Math.max(1366, window.innerWidth)-MAP_WIDTH-50;
 
 const DAILY_MAX_TEMP = "Daily Maximum Temperature",
@@ -37,6 +37,9 @@ const ROWS = [...Array(NROW).keys()].map((d, i) => {
   // .style("width", `${MAP_WIDTH}px`)
   return row;
 })
+
+d3.select('body')
+  .style('margin-top', `${(window.innerHeight - 650)/2}px`)
 
 function insertDropDown(svg, id, label, width, options) {
   const dd = svg.append("div")
@@ -371,7 +374,7 @@ function callback(data) {
 
         const plotOptions = {
           width: LINE_WIDTH,
-          height: Math.min(512, MAP_HEIGHT),
+          height: 512,
           paddingLeft: 50,
           paddingRight: 50,
           paddingTop: 40,
