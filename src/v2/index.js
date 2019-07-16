@@ -1,17 +1,10 @@
+const MAIN_FONT = "Roboto,\"Helvetica Neue\",Helvetica,Arial,sans-serif";
+
 const url = "https://raw.githubusercontent.com/yaoc1996/india-maxt/master/data";
 const rawDir = "/raw_by_district";
 
 const files = [
-  "/MaxT_ALL.csv", "/MaxT_average.csv", "/MaxT_median.csv",
-  "/MinT_ALL.csv", "/MinT_average.csv", "/MinT_median.csv",
-  // "mk_maxT_p.csv", "sens_maxT_slope.csv",
-  // "mk_minT_p.csv", "sens_minT_slope.csv",
-  // "mk_over90_p.csv", "sens_over90_slope.csv",
-  // "mk_over95_p.csv", "sens_over95_slope.csv",
-  // "mk_under10_p.csv", "sens_under10_slope.csv",
-  // "mk_under05_p.csv", "sens_under05_slope.csv",
-  // "mk_hottest_day_p.csv", "sens_hottest_day_slope.csv",
-  // "mk_coldest_day_p.csv", "sens_coldest_day_slope.csv",
+  "/MaxT_ALL.csv", 
   "/over90.csv", "/over95.csv",
   "/under10.csv", "/under05.csv",
   "/HottestDayOccurrence.csv", "/ColdestDayOccurrence.csv",
@@ -20,64 +13,19 @@ const files = [
 
 const INDGeojsonFile = "/gadm36_IND_2_simplified.json";
 const MAP_HEIGHT = window.innerHeight-150,
-      MAP_WIDTH = Math.min(window.innerHeight-150, 512);
+      MAP_WIDTH = Math.min(window.innerHeight-150, 512),
+      LINE_WIDTH = Math.max(1366, window.innerWidth)-MAP_WIDTH-50;
 
-const TMAX_ABSOLUTE = "TMax (Absolute)",
-  TMAX_AVERAGE = "TMax (Average)",
-  TMAX_MEDIAN = "TMax (Median)",
-  TMIN_ABSOLUTE = "TMin (Absolute)",
-  TMIN_AVERAGE = "TMin (Average)",
-  TMIN_MEDIAN = "TMin (Median)",
-  // MK_MAXT = "Mann Kendall Pvalue (Annual Maximum Temperature)",
-  // SENS_MAXT = "Sen's Estimator Slope (Annual Maximum Temperature)",
-  // MK_MINT = "Mann Kendall Pvalue (Annual Minimum Temperature)",
-  // SENS_MINT = "Sen's Estimator Slope (Annual Minimum Temperature)",
-  // MK_OVER90 = "Mann Kendall Pvalue (Number of Days over the 90th Percentile)",
-  // SENS_OVER90 = "Sen's Estimator Slope (Number of Days over the 90th Percentile)",
-  // MK_OVER95 = "Mann Kendall Pvalue (Number of Days over the 95th Percentile)",
-  // SENS_OVER95 = "Sen's Estimator Slope (Number of Days over the 95th Percentile)",
-  // MK_UNDER10 = "Mann Kendall Pvalue (Number of Days under the 10th Percentile)",
-  // SENS_UNDER10 = "Sen's Estimator Slope (Number of Days under the 10th Percentile)",
-  // MK_UNDER05 = "Mann Kendall Pvalue (Number of Days under the 5th Percentile)",
-  // SENS_UNDER05 = "Sen's Estimator Slope (Number of Days under the 5th Percentile)",
-  // MK_HOTTESTDAY = "Mann Kendall Pvalue (Hottest Day Occurrence from Jan. 1st)",
-  // SENS_HOTTESTDAY = "Sen's Estimator Slope (Hottest Day Occurrence from Jan. 1st)",
-  // MK_COLDESTDAY = "Mann Kendall Pvalue (Coldest Day Occurrence from Jan. 1st)",
-  // SENS_COLDESTDAY = "Sen's Estimator Slope (Coldest Day Occurrence from Jan. 1st)",
-  SEPARATOR = "─────";
+const DAILY_MAX_TEMP = "Daily Maximum Temperature",
+  NUM_DAYS_OVER_90 = "Number of Days over the 90th Percentile",
+  NUM_DAYS_OVER_95 = "Number of Days over the 95th Percentile",
+  HOTTEST_OCCUR = "Hottest Day Occurrence";
 
 const INDICATORS = [
-  TMAX_MEDIAN,
-  TMAX_AVERAGE,
-  TMAX_ABSOLUTE,
-  SEPARATOR,
-  TMIN_MEDIAN,
-  TMIN_AVERAGE,
-  TMIN_ABSOLUTE,
-  // SEPARATOR,
-  // MK_MAXT,
-  // SENS_MAXT,
-  // SEPARATOR,
-  // MK_MINT,
-  // SENS_MINT,
-  // SEPARATOR,
-  // MK_OVER90,
-  // SENS_OVER90,
-  // SEPARATOR,
-  // MK_OVER95,
-  // SENS_OVER95,
-  // SEPARATOR,
-  // MK_UNDER10,
-  // SENS_UNDER10,
-  // SEPARATOR,
-  // MK_UNDER05,
-  // SENS_UNDER05,
-  // SEPARATOR,
-  // MK_HOTTESTDAY,
-  // SENS_HOTTESTDAY,
-  // SEPARATOR,
-  // MK_COLDESTDAY,
-  // SENS_COLDESTDAY,
+  DAILY_MAX_TEMP,
+  NUM_DAYS_OVER_90,
+  NUM_DAYS_OVER_95,
+  HOTTEST_OCCUR,
 ]
 
 const NROW = 1;
@@ -90,122 +38,92 @@ const ROWS = [...Array(NROW).keys()].map((d, i) => {
   return row;
 })
 
+function insertDropDown(svg, id, label, width, options) {
+  const dd = svg.append("div")
+    .attr("id", id)
+    .attr("class", "form-group dropdowns")
+    .style("width", `${width}px`)
+    .style('height', '100px')
+    .style("margin", "5px")
+    .style("display", "inline-block")
+    .style('opacity', 0)
+
+  dd.append("label")
+    .attr("for", id+'-select')
+    .attr("class", "select-label")
+    .text(label)
+
+  dd.append("select")
+    .attr("id", id+'-select')
+    .attr("class", "form-control")
+    .style('font-size', '14px')
+    .selectAll()
+    .data(options)
+    .enter()
+    .append("option")
+    .style('font-size', '14px')
+    .text(d => d)
+}
+
 ROWS.forEach((row, i) => {
   const div = row.append("div")
     .style("display", "inline-block")
 
-  const dd1 = div.append("div")
+  const mapDiv = div.append("div")
     .attr("id", `dropdown-map-div-${i}`)
     .style("display", "inline-block")
     .style("width", `${MAP_WIDTH}px`)
     .style("margin-bottom", "10px")
     .style("white-space", "normal")
 
-  const dd11 = dd1.append("div")
+  const dd1 = mapDiv.append("div")
     .attr("class", "form-group")
-    .style("width", `${MAP_WIDTH / 2 - 10}px`)
+    .style("width", `${MAP_WIDTH}px`)
+    .style('height', '85px')
     .style("margin", "5px")
     .style("display", "inline-block")
-
-  dd11.append("label")
-    .attr("for", `dropdown-${i}-vistype`)
-    .attr("class", "select-label")
-    .text("Vis Type")
-
-  dd11.append("select")
-    .attr("id", `dropdown-${i}-vistype`)
-    .attr("class", "form-control")
-    .selectAll()
-    .data(["District"])
-    .enter()
-    .append("option")
-    .text(d => d)
-
-  const dd12 = dd1.append("div")
-    .attr("class", "form-group")
-    .style("width", `${MAP_WIDTH / 2 - 10}px`)
-    .style("margin", "5px")
-    .style("display", "inline-block")
-
-  dd12.append("label")
-    .attr("for", `dropdown-${i}-indicator`)
-    .attr("class", "select-label")
-    .text("Indicator")
-
-  dd12.append("select")
-    .attr("id", `dropdown-${i}-indicator`)
-    .attr("class", "form-control")
-    .selectAll()
-    .data(INDICATORS)
-    .enter()
-    .append("option")
-    .attr("class", d => (d == SEPARATOR && "select-separator"))
-    .text(d => d)
-
-  dd12.selectAll(".select-separator")
-    .attr("disabled", "disabled")
 
   dd1.append("div")
+    .style('display', 'inline-block')
+    .style('margin-top', '20px')
+    .style('font-family', MAIN_FONT)
+    .style('font-size', '24px')
+    .style('font-weight', '100')
+    .text("Select a District to Visualize")
+
+
+  mapDiv.append("div")
     .attr("id", `district-map-${i}`)
     .attr("class", `svg-wrapper map-${i}`)
     .append("svg")
 
-  // row.append("div")
-  //    .attr("id", `plot-description-${i}`)
-  //    .attr("class", "text-box")
-  //    .style("width", MAP_WIDTH)
-  //    .style("height", "95px")
-  //    .style("margin-top", "5px")
-  //    .style("background", "white")
+  const indDiv = div.append("div")
+    .attr("id", `dropdown-plot-div-${i}`)
+    .style("display", "inline-block")
+    .style("margin-bottom", "10px")
+    .style("white-space", "normal")
+    .style('vertical-align', 'top')
 
-  const lineDIV = div.append("div")
+  const dd2 = indDiv.append("div")
+    .attr("class", "form-group")
+    .style('height', '85px')
+    .style("margin", "5px")
+    .style("display", "block")
+
+  insertDropDown(dd2, `dropdown-${i}-indicator`, 'Indicator', 300, INDICATORS);
+  insertDropDown(dd2, `dropdown-${i}-year`, 'Year', 300, [...Array(30).keys()].map(d => d+1985))
+
+  const lineDIV = indDiv.append("div")
     .attr("id", `line-charts-${i}`)
     .attr("class", "svg-wrapper")
     .style("margin-left", "10px")
     .style("margin-right", "10px")
-    .style('height', `${dd1.node().getBoundingClientRect().height}px`)
+    .style('height', `${MAP_HEIGHT}px`)
     .style('overflow-y', 'auto')
 
   lineDIV.append("div")
     .append("svg")
-    .attr("id", `over90-line-${i}`)
-    .attr("class", "dependent-plot")
-    .attr("width", "0")
-    .attr("height", "0")
-
-  lineDIV.append("div")
-    .append("svg")
-    .attr("id", `over95-line-${i}`)
-    .attr("class", "dependent-plot")
-    .attr("width", "0")
-    .attr("height", "0")
-
-  lineDIV.append("div")
-    .append("svg")
-    .attr("id", `hottestday-line-${i}`)
-    .attr("class", "dependent-plot")
-    .attr("width", "0")
-    .attr("height", "0")
-
-  lineDIV.append("div")
-    .attr('class', 'form-group')
-    .style('display', 'inline-block')
-    .style('width', '100px')
-    .style('margin', '6px')
-    .style('margin-top', '12px')
-    .append("select")
-    .attr("id", `dropdown-${i}-year-select`)
-    .attr("class", "form-control")
-    .style('opacity', 0)
-    .selectAll()
-    .data([...Array(30).keys()].map(d => d+1985))
-    .enter()
-    .append("option")
-    .text(d => d)
-
-  lineDIV.append("div")
-    .append("svg")
-    .attr("id", `dailytemp-line-${i}`)
+    .attr("id", `indicator-line-chart-${i}`)
     .attr("class", "dependent-plot")
     .attr("width", "0")
     .attr("height", "0")
@@ -220,16 +138,7 @@ Promise.all([
 function callback(data) {
   const [
     INDGeojson,
-    maxT, maxTAverage, maxTMedian,
-    minT, minTAverage, minTMedian,
-    // mkMaxTP, sensMaxTSlope, 
-    // mkMinTP, sensMinTSlope, 
-    // mkOver90P, sensOver90Slope, 
-    // mkOver95P, sensOver95Slope, 
-    // mkUnder10P, sensUnder10Slope, 
-    // mkUnder05P, sensUnder05Slope, 
-    // mkHottestDayP, sensHottestDaySlope, 
-    // mkColdestDayP, sensColdestDaySlope, 
+    maxT,
     over90, over95,
     under10, under05,
     hottestDay, coldestDay,
@@ -261,47 +170,6 @@ function callback(data) {
     }
   }
 
-  var nIndicators = 0;
-  var indicatorOptionNames = [];
-  var indicatorGridDatas = [];
-  var indicatorCScales = [];
-  var indicatorClickable = [];
-  var indicatorDescription = [];
-
-  function addIndicatorOption(name, gridData, colorInterpolation, clickable, description = "") {
-    var weights = [];
-    for (var i = 0; i < gridHeight; i++) {
-      for (var j = 0; j < gridWidth; j++) {
-        if (gridData[i][columnNames[j]] != "") {
-          weights.push(parseFloat(gridData[i][columnNames[j]]))
-        }
-      }
-    }
-
-    const cScale = d3.scaleSequential(colorInterpolation)
-      .domain([Math.min(...weights), Math.max(...weights)]);
-
-    nIndicators++;
-    indicatorOptionNames.push(name);
-    indicatorGridDatas.push(gridData);
-    indicatorCScales.push(cScale);
-    indicatorClickable.push(clickable);
-    indicatorDescription.push(description);
-  }
-
-  addIndicatorOption(TMAX_MEDIAN, maxTMedian, d => d3.interpolateYlOrRd(d * 0.8 + 0.2), true,
-    "Median annual maximum temperatures from 1985 to 2014. The highest temperatures are concentrated on the central part of India.");
-  addIndicatorOption(TMAX_AVERAGE, maxTAverage, d => d3.interpolateYlOrRd(d * 0.8 + 0.2), true,
-    "Average annual maximum temperatures from 1985 to 2014. The highest temperatures are concentrated on the central part of India.");
-  addIndicatorOption(TMAX_ABSOLUTE, maxT, d => d3.interpolateYlOrRd(d * 0.8 + 0.2), true,
-    "Absolute annual maximum temperatures from 1985 to 2014. The highest temperatures are concentrated on the central part of India.");
-  addIndicatorOption(TMIN_MEDIAN, minTMedian, d => d3.interpolateBlues((1 - d) * 0.8 + 0.2), false,
-    "Median annual minimum temperatures from 1985 to 2014. The coldest temperatures are concentrated on the northern part of India.");
-  addIndicatorOption(TMIN_AVERAGE, minTAverage, d => d3.interpolateBlues((1 - d) * 0.8 + 0.2), false,
-    "Average annual minimum temperatures from 1985 to 2014. The coldest temperatures are concentrated on the northern part of India.");
-  addIndicatorOption(TMIN_ABSOLUTE, minT, d => d3.interpolateBlues((1 - d) * 0.8 + 0.2), false,
-    "Absolute annual minimum temperatures from 1985 to 2014. The coldest temperatures are concentrated on the northern part of India.");
-
   const lngIdx = lngs.reduce(reduceByValue, {});
   const latIdx = lats.reduce(reduceByValue, {});
 
@@ -332,10 +200,43 @@ function callback(data) {
   const hottestDayDict = hottestDay.reduce(reduceByGridCoord, {});
   const coldestDayDict = coldestDay.reduce(reduceByGridCoord, {});
 
+  ROWS.forEach((row, i) => {
+    const dmap = d3.select(`#district-map-${i} svg`),
+      lineChart = row.select(`#indicator-line-chart-${i}`);
+
+    const map = renderDistrictMap([dmap, [lineChart]], i);
+
+    const cVals = INDGeojson.features.map(d => {
+      const NAME1 = d["properties"]["NAME_1"],
+        NAME2 = d["properties"]["NAME_2"],
+        grid = districtToGrid[NAME1 + NAME2],
+        i = lngIdx[grid[0]],
+        j = latIdx[grid[1]];
+
+      if (maxT[j][columnNames[i]] == "")
+        return null;
+      else
+        return parseFloat(maxT[j][columnNames[i]]);
+    });
+
+    var weights = [];
+    for (var i = 0; i < gridHeight; i++) {
+      for (var j = 0; j < gridWidth; j++) {
+        if (maxT[i][columnNames[j]] != "") {
+          weights.push(parseFloat(maxT[i][columnNames[j]]))
+        }
+      }
+    }
+
+    const scale = d3.scaleSequential(d => d3.interpolateYlOrRd(d * 0.8 + 0.2))
+      .domain([Math.min(...weights), Math.max(...weights)]);
+
+    map.recolor(cVals, scale);
+    map.updateScale(scale);
+  })
+
+
   const linePlots = [
-    Array(NROW).map(() => null),
-    Array(NROW).map(() => null),
-    Array(NROW).map(() => null),
     Array(NROW).map(() => null),
   ]
 
@@ -344,22 +245,18 @@ function callback(data) {
     var lockTarget = "";
 
     const mapPlotTooltip = {
-      width: 200,
-      height: 125,
+      width: 225,
+      height: 75,
     }
 
-    const tooltipItems = ["State", "District", "Lng", "Lat", "Value"];
+    const tooltipItems = ["State", "District", "Absolute Max-T"];
 
     function mouseenter(d) {
       if (locked) return;
 
-      const districtKey = d["properties"]["NAME_1"] + d["properties"]["NAME_2"];
-
       const tooltipItemValues = [
         d["properties"]["NAME_1"],
         d["properties"]["NAME_2"],
-        districtToGrid[districtKey][2],
-        districtToGrid[districtKey][3],
         d.cScaleValue,
       ];
 
@@ -381,17 +278,17 @@ function callback(data) {
         .enter()
         .append("text")
         .attr("class", "text-contents")
-        .attr("x", (d, i) => 10 + i * 70)
+        .attr("x", (d, i) => 10 + i * 105)
         .attr("fill", "black")
         .style("white-space", "pre")
         .style("font-size", "12px")
-        .style("font-family", "Roboto,\"Helvetica Neue\",Helvetica,Arial,sans-serif")
+        .style("font-family", MAIN_FONT)
         .style("font-weight", (d, i) => i == 0 ? "bold" : "normal")
         .text(d => isNaN(d) ? d : parseFloat(d).toFixed(2))
 
       items.append("line")
-        .attr("x1", 63)
-        .attr("x2", 63)
+        .attr("x1", 107)
+        .attr("x2", 107)
         .attr("y1", 0)
         .attr("y2", mapPlotTooltip.height)
         .attr("stroke", "white")
@@ -415,15 +312,17 @@ function callback(data) {
       svgs[0].select(`.chart-tooltip`)
         .style("opacity", 0);
 
+      d3.select(`#dropdown-${id}-indicator`)
+        .style('opacity', 0)
+      d3.select(`#dropdown-${id}-year`)
+        .style('opacity', 0)
+
       for (var i = 0; i < svgs[1].length; i++) {
         svgs[1][i].selectAll("*").remove();
         svgs[1][i].attr("width", "0")
           .attr("height", "0")
         linePlots[i][id] = null;
       }
-
-      d3.select(`#dropdown-${id}-year-select`)
-        .style('opacity', 0)
 
       reAdjustLinePlots();
     }
@@ -448,16 +347,13 @@ function callback(data) {
           linePlots[i].forEach(d => (d != null) && d.updateYScale(min, max));
       }
 
-      for (var i = 0; i < NROW; i++) {
-        const leftDiv = d3.select(`#dropdown-map-div-${i}`);
-
-        d3.select(`#line-charts-${i}`)
-          .style('height', `${leftDiv.node().getBoundingClientRect().height}px`)
-      }
     }
 
 
     function clickedDistrict(d) {
+      d3.select(`#dropdown-${id}-indicator`)
+        .style('opacity', 1)
+
       const NAME1 = d["properties"]["NAME_1"],
         NAME2 = d["properties"]["NAME_2"],
         grid = districtToGrid[NAME1 + NAME2],
@@ -474,8 +370,8 @@ function callback(data) {
         highlight.bind(this)(`.feature-${id}`);
 
         const plotOptions = {
-          width: 1024,
-          height: 256,
+          width: LINE_WIDTH,
+          height: Math.min(512, MAP_HEIGHT),
           paddingLeft: 50,
           paddingRight: 50,
           paddingTop: 40,
@@ -496,9 +392,110 @@ function callback(data) {
           collisionRadius: 8,
         }
 
-        const indicator = d3.select(`#dropdown-${id}-indicator`).node().value;
+        const indicator = d3.select(`#dropdown-${id}-indicator select`)
+          .on('change', drawAppropriateIndicator);
 
-        if (indicator == TMAX_ABSOLUTE || indicator == TMAX_AVERAGE || indicator == TMAX_MEDIAN) {
+        drawAppropriateIndicator();
+
+        function drawAppropriateIndicator() {
+          d3.select(`#dropdown-${id}-year`)
+            .style('opacity', 0);
+
+          switch(indicator.node().value) {
+            case DAILY_MAX_TEMP:
+              drawDailyMapTempLineChart();
+              break;
+            case NUM_DAYS_OVER_90:
+              drawOver90PercentileLineChart();
+              break;
+            case NUM_DAYS_OVER_95:
+              drawOver95PercentileLineChart();
+              break;
+            case HOTTEST_OCCUR:
+              drawHottestOccurrentLineChart();
+              break;
+            default:
+              break;
+          }
+        }
+
+        function drawDailyMapTempLineChart() {
+          d3.json(url+rawDir+`/${cleanName}_raw.json`)
+            .then(json => {
+              d3.select(`#dropdown-${id}-year`)
+                .style('opacity', 1);
+
+              const dd = d3.select(`#dropdown-${id}-year-select`)
+
+              const data = json[NAME1+NAME2];
+              const firstPV = over90dict[label].percentileValue;
+              const secondPV = over95dict[label].percentileValue;
+
+              function drawDailyTempLineChart() {
+                const baseYear = 1985;
+                const year = dd.node().value;
+                const numDays = (year % 4 == 0) ? 366 : 365;
+                const days = [...Array(numDays).keys()].map(d => d+1);
+
+                const svg = svgs[1][0];
+
+                const plot = linePlot(svg, days, data[year-baseYear], {
+                  ...plotOptions,
+                  collisionRadius: 2,
+                  id: 'dailytemp-'+cleanName,
+                  title: `Daily Maximum Temperatures for ${year}`,
+                  xLabel: "Day of the Year",
+                  yLabel: "Temperature",
+                  mouseEnterPlotPoint: displayPointInfoDate('dailytemp-' + cleanName, d => dd.node().value, d => d[0], d => ` - ${parseFloat(d[1]).toFixed(2)} °C`),
+                  mouseLeavePlotPoint: hideTooltip.bind(null, 'dailytemp-' + cleanName),
+                });
+
+                linePlots[0][id] = plot;
+
+                const labels = ['90th', '95th'];
+                const colors = ['lightsalmon', 'red'];
+                const xOffset = 5;
+                const yOffsets = [15, -5];
+
+                svg.insert('line', 'polyline')
+                  .attr('x1', plot.xscale.range()[0])
+                  .attr('x2', plot.xscale.range()[1])
+                  .attr('y1', plot.yscale(parseFloat(firstPV)))
+                  .attr('y2', plot.yscale(parseFloat(firstPV)))
+                  .attr('stroke-width', '1px')
+                  .attr('stroke', colors[0])
+
+                svg.insert('line', 'polyline')
+                  .attr('x1', plot.xscale.range()[0])
+                  .attr('x2', plot.xscale.range()[1])
+                  .attr('y1', plot.yscale(parseFloat(secondPV)))
+                  .attr('y2', plot.yscale(parseFloat(secondPV)))
+                  .attr('stroke-width', '1px')
+                  .attr('stroke', colors[1])
+
+                svg.append('text')
+                  .attr('x', plot.xscale.range()[0]+xOffset)
+                  .attr('y', plot.yscale(parseFloat(firstPV))+yOffsets[0])
+                  .style('font-size', 10)
+                  .style('fill', colors[0])
+                  .text(`${labels[0]} Percentile: ${parseFloat(firstPV).toFixed(2)} °C`)
+
+                svg.append('text')
+                  .attr('x', plot.xscale.range()[0]+xOffset)
+                  .attr('y', plot.yscale(parseFloat(secondPV))+yOffsets[1])
+                  .style('font-size', 10)
+                  .style('fill', colors[1])
+                  .text(`${labels[1]} Percentile: ${parseFloat(secondPV).toFixed(2)} °C`)
+              }
+
+              dd.on('change', drawDailyTempLineChart);
+              
+              drawDailyTempLineChart();
+            });
+
+        }
+
+        function drawOver90PercentileLineChart() {
           linePlots[0][id] = linePlot(svgs[1][0], years, over90dict[label].counts, {
             ...plotOptions,
             id: 'tmax-over-90-' + cleanName,
@@ -506,144 +503,35 @@ function callback(data) {
             mouseEnterPlotPoint: displayPointInfoCount('tmax-over-90-' + cleanName, d => d[0], d => d[1]),
             mouseLeavePlotPoint: hideTooltip.bind(null, 'tmax-over-90-' + cleanName),
           })
+        }
 
-          linePlots[1][id] = linePlot(svgs[1][1], years, over95dict[label].counts, {
+        function drawHottestOccurrentLineChart() {
+          linePlots[0][id] = linePlot(svgs[1][0], years, hottestDayDict[label].counts, {
+            ...plotOptions,
+            line: false,
+            id: 'tmax-hottest-' + cleanName,
+            title: `Annual Hottest Day Occurrence`,
+            mouseEnterPlotPoint: displayPointInfoDate('tmax-hottest-' + cleanName, d => d[0], d => d[1]),
+            mouseLeavePlotPoint: hideTooltip.bind(null, 'tmax-hottest-' + cleanName),
+            pointRadius: 3,
+            pointColor: 'red',
+            yLabel: 'Number of Days from Jan. 1st'
+          })
+        }
+
+        function drawOver95PercentileLineChart() {
+          linePlots[0][id] = linePlot(svgs[1][0], years, over95dict[label].counts, {
             ...plotOptions,
             id: 'tmax-over-95-' + cleanName,
             title: `Number of Days over the 95th Percentile ( ${parseFloat(over95dict[label].percentileValue).toFixed(2)} °C )`,
             mouseEnterPlotPoint: displayPointInfoCount('tmax-over-95-' + cleanName, d => d[0], d => d[1]),
             mouseLeavePlotPoint: hideTooltip.bind(null, 'tmax-over-95-' + cleanName),
           })
-
-          linePlots[2][id] = linePlot(svgs[1][2], years, hottestDayDict[label].counts, {
-            ...plotOptions,
-            line: false,
-            id: 'tmax-hottest-' + cleanName,
-            title: `Hottest Day Occurrence (Days offset from Jan. 1st )`,
-            mouseEnterPlotPoint: displayPointInfoDate('tmax-hottest-' + cleanName, d => d[0], d => d[1]),
-            mouseLeavePlotPoint: hideTooltip.bind(null, 'tmax-hottest-' + cleanName),
-          })
         }
-
-        if (indicator == TMIN_ABSOLUTE || indicator == TMIN_AVERAGE || indicator == TMIN_MEDIAN) {
-          linePlots[0][id] = linePlot(svgs[1][0], years, under10dict[label].counts, {
-            ...plotOptions,
-            id: 'tmin-over-90-' + cleanName,
-            title: `Number of Days under the 10th Percentile ( ${under10dict[label].percentileValue} °C )`,
-            mouseEnterPlotPoint: displayPointInfoCount('tmin-over-90-' + cleanName, d => d[0], d => d[1]),
-            mouseLeavePlotPoint: hideTooltip.bind(null, 'tmin-over-90-' + cleanName),
-          })
-
-          linePlots[1][id] = linePlot(svgs[1][1], years, under05dict[label].counts, {
-            ...plotOptions,
-            id: 'tmin-over-95-' + cleanName,
-            title: `Number of Days under the 5th Percentile ( ${under05dict[label].percentileValue} °C )`,
-            mouseEnterPlotPoint: displayPointInfoCount('tmin-over-95-' + cleanName, d => d[0], d => d[1]),
-            mouseLeavePlotPoint: hideTooltip.bind(null, 'tmin-over-95-' + cleanName),
-          })
-
-          linePlots[2][id] = linePlot(svgs[1][2], years, coldestDayDict[label].counts, {
-            ...plotOptions,
-            line: false,
-            id: 'tmin-coldest-' + cleanName,
-            title: `Coldest Day Occurrence (Days offset from Jan. 1st )`,
-            mouseEnterPlotPoint: displayPointInfoDate('tmin-coldest-' + cleanName, d => d[0], d => d[1]),
-            mouseLeavePlotPoint: hideTooltip.bind(null, 'tmin-coldest-' + cleanName),
-          })
-        }
-
-        var isMin = indicator == TMIN_ABSOLUTE || indicator == TMIN_AVERAGE || indicator == TMIN_MEDIAN;
-
-        d3.json(url+rawDir+`/${cleanName}_raw.json`)
-          .then(json => {
-            const dd = d3.select(`#dropdown-${id}-year-select`)
-
-            const newPO = {
-              ...plotOptions,
-              height: 384,
-              collisionRadius: 2,
-              id: 'dailytemp-'+cleanName,
-              title: 'Daily Maximum Temperature',
-              xLabel: "Day of the Year",
-              yLabel: "Temperature",
-              mouseEnterPlotPoint: displayPointInfoDate('dailytemp-' + cleanName, d => dd.node().value, d => d[0], d => `, T=${parseFloat(d[1]).toFixed(2)}`),
-              mouseLeavePlotPoint: hideTooltip.bind(null, 'dailytemp-' + cleanName),
-            }
-
-            dd.on('change', d => {
-              drawDailyTempLineChart(json[NAME1+NAME2], dd.node().value, newPO, isMin, 
-                (isMin) ? under10dict[label].percentileValue : over90dict[label].percentileValue,
-                (isMin) ? under05dict[label].percentileValue : over95dict[label].percentileValue
-              );
-            });
-            
-            drawDailyTempLineChart(json[NAME1+NAME2], dd.node().value, newPO, isMin, 
-              (isMin) ? under10dict[label].percentileValue : over90dict[label].percentileValue,
-              (isMin) ? under05dict[label].percentileValue : over95dict[label].percentileValue
-            );
-
-            dd.style('opacity', 1)
-          });
-
 
         reAdjustLinePlots();
       }
 
-      function drawDailyTempLineChart(data, year, plotOptions, isMin, firstPV, secondPV) {
-        const numDays = (year % 4 == 0) ? 366 : 365;
-        const days = [...Array(numDays).keys()].map(d => d+1);
-
-        const baseYear = 1985;
-
-        linePlots[3][id] = linePlot(svgs[1][3], days, data[year-baseYear], plotOptions);
-
-        var labels = null;
-        var colors = null;
-        var xOffset = null;
-        var yOffsets = null;
-
-        if (!isMin) {
-          labels = ['90th', '95th'];
-          colors = ['lightsalmon', 'red'];
-          xOffset = 5;
-          yOffsets = [15, -5];
-        } else {
-          labels = ['10th', '5th'];
-          colors = ['royalblue', 'cornflowerblue'];
-          xOffset = 300
-          yOffsets = [-5, 15];
-        }
-
-        svgs[1][3].insert('line', 'polyline')
-          .attr('x1', linePlots[3][id].xscale.range()[0])
-          .attr('x2', linePlots[3][id].xscale.range()[1])
-          .attr('y1', linePlots[3][id].yscale(parseFloat(firstPV)))
-          .attr('y2', linePlots[3][id].yscale(parseFloat(firstPV)))
-          .attr('stroke-width', '1px')
-          .attr('stroke', colors[0])
-
-        svgs[1][3].insert('line', 'polyline')
-          .attr('x1', linePlots[3][id].xscale.range()[0])
-          .attr('x2', linePlots[3][id].xscale.range()[1])
-          .attr('y1', linePlots[3][id].yscale(parseFloat(secondPV)))
-          .attr('y2', linePlots[3][id].yscale(parseFloat(secondPV)))
-          .attr('stroke-width', '1px')
-          .attr('stroke', colors[1])
-
-        svgs[1][3].append('text')
-          .attr('x', linePlots[3][id].xscale.range()[0]+xOffset)
-          .attr('y', linePlots[3][id].yscale(parseFloat(firstPV))+yOffsets[0])
-          .style('font-size', 10)
-          .style('fill', colors[0])
-          .text(`${labels[0]} Percentile: ${parseFloat(firstPV).toFixed(2)}`)
-
-        svgs[1][3].append('text')
-          .attr('x', linePlots[3][id].xscale.range()[0]+xOffset)
-          .attr('y', linePlots[3][id].yscale(parseFloat(secondPV))+yOffsets[1])
-          .style('font-size', 10)
-          .style('fill', colors[1])
-          .text(`${labels[1]} Percentile: ${parseFloat(secondPV).toFixed(2)}`)
-      }
 
       function displayPointInfoDate(id, getYear, getDay, additionalInfo=d=>'') {
         return function (d) {
@@ -712,9 +600,9 @@ function callback(data) {
       height: MAP_HEIGHT,
       paddingLeft: 10,
       paddingRight: 10,
-      paddingTop: 10,
+      paddingTop: 30,
       paddingBottom: 10,
-      title: "",
+      title: "Absolute Max-T from 1985 - 2014",
       tooltipWidth: mapPlotTooltip.width,
       tooltipHeight: mapPlotTooltip.height,
       tooltipTransform: `translate(${MAP_WIDTH - mapPlotTooltip.width - 10}, ${MAP_HEIGHT - mapPlotTooltip.height - 10})`,
@@ -741,106 +629,11 @@ function callback(data) {
       }
     }
 
-
     return {
       ...plot,
       resetClick: resetClick,
     }
   }
-
-
-  function updateRow(rowID, maps) {
-    d3.selectAll(`.map-${rowID}`)
-      .style("display", "none")
-
-    const visType = d3.select(`#dropdown-${rowID}-vistype`).node().value,
-      indicator = d3.select(`#dropdown-${rowID}-indicator`).node().value,
-      map = maps[visType];
-
-    function extractForDistrictMap(target) {
-      return INDGeojson.features.map(d => {
-        const NAME1 = d["properties"]["NAME_1"],
-          NAME2 = d["properties"]["NAME_2"],
-          grid = districtToGrid[NAME1 + NAME2],
-          i = lngIdx[grid[0]],
-          j = latIdx[grid[1]];
-
-        if (target[j][columnNames[i]] == "")
-          return null;
-        else
-          return parseFloat(target[j][columnNames[i]]);
-      });
-    }
-
-    function extractForGridCentroidMap(target) {
-      var data = [];
-      for (var i = 0; i < target.length; i++) {
-        for (var j = 0; j < columnNames.length; j++) {
-          if (maxT[i][columnNames[j]] != "") {
-            data.push(parseFloat(target[i][columnNames[j]]));
-          }
-        }
-      }
-      return data;
-    }
-
-    var extractTarget,
-      extractFunction,
-      scale;
-
-    switch (visType) {
-      case "District":
-        d3.select(`#district-map-${rowID}`)
-          .style("display", "inline-block");
-        extractFunction = extractForDistrictMap;
-        break;
-      case "Grid Centroid":
-        d3.select(`#grid-centroid-map-${rowID}`)
-          .style("display", "inline-block");
-        extractFunction = extractForGridCentroidMap;
-        break;
-      default:
-        break;
-    }
-
-    for (var i = 0; i < nIndicators; i++) {
-      if (indicator == indicatorOptionNames[i]) {
-        extractTarget = indicatorGridDatas[i];
-        scale = indicatorCScales[i];
-
-        map.resetClick();
-        break;
-      }
-    }
-
-    map.recolor(extractFunction(extractTarget), scale);
-    map.updateScale(scale);
-
-    d3.select(`#plot-description-${rowID}`)
-      .text(indicatorDescription[i])
-  }
-
-  ROWS.forEach((row, i) => {
-    const dmap = d3.select(`#district-map-${i} svg`),
-      gcent = d3.select(`#grid-centroid-map-${i} svg`),
-      over90 = d3.select(`#over90-line-${i}`),
-      over95 = d3.select(`#over95-line-${i}`),
-      hottestDay = d3.select(`#hottestday-line-${i}`),
-      dailytemp = d3.select(`#dailytemp-line-${i}`);
-
-    const districtMap = renderDistrictMap([dmap, [over90, over95, hottestDay, dailytemp]], i);
-
-    const maps = {
-      "District": districtMap,
-    }
-
-    updateRow(i, maps);
-
-    row.selectAll(`select`)
-      .on("change", updateRow.bind(null, i, maps))
-
-    updateRow(i, maps);
-  })
 }
 
 function resetHighlight(selector) {
@@ -1148,7 +941,7 @@ function attachColorScale(svg, options) {
     .attr("id", gradientID)
 
   const colorLegend = svg.append('g')
-    .attr("transform", `translate(${options.width - options.paddingRight - 150}, 20)`)
+    .attr("transform", `translate(${options.width - options.paddingRight - 150}, 40)`)
 
   colorLegend.append("rect")
     .attr("width", 150)
