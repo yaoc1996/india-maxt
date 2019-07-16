@@ -95,9 +95,11 @@ ROWS.forEach((row, i) => {
     .style("display", "inline-block")
 
   const dd1 = div.append("div")
-    .style("display", "block")
+    .attr("id", `dropdown-map-div-${i}`)
+    .style("display", "inline-block")
     .style("width", `${MAP_WIDTH}px`)
     .style("margin-bottom", "10px")
+    .style("white-space", "normal")
 
   const dd11 = dd1.append("div")
     .attr("class", "form-group")
@@ -143,7 +145,7 @@ ROWS.forEach((row, i) => {
   dd12.selectAll(".select-separator")
     .attr("disabled", "disabled")
 
-  div.append("div")
+  dd1.append("div")
     .attr("id", `district-map-${i}`)
     .attr("class", `svg-wrapper map-${i}`)
     .append("svg")
@@ -161,7 +163,7 @@ ROWS.forEach((row, i) => {
     .attr("class", "svg-wrapper")
     .style("margin-left", "10px")
     .style("margin-right", "10px")
-    .style('height', `${MAP_HEIGHT}px`)
+    .style('height', `${dd1.node().getBoundingClientRect().height}px`)
     .style('overflow-y', 'auto')
 
   lineDIV.append("div")
@@ -444,6 +446,13 @@ function callback(data) {
 
         if (min != null && max != null)
           linePlots[i].forEach(d => (d != null) && d.updateYScale(min, max));
+      }
+
+      for (var i = 0; i < NROW; i++) {
+        const leftDiv = d3.select(`#dropdown-map-div-${i}`);
+
+        d3.select(`#line-charts-${i}`)
+          .style('height', `${leftDiv.node().getBoundingClientRect().height}px`)
       }
     }
 
